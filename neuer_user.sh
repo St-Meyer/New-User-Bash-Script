@@ -2,13 +2,15 @@
 
 USER=$1
 shift
+PUB_KEY=$2
+shift
 HOSTS=($@)
+
 KEY_DIR="/home/$USER/.ssh"
-PUB_KEY="$KEY_DIR/id_ed25519.pub"
-PRIV_KEY="$KEY_DIR/id_ed25519"
-AUTHORIZED_KEYS="$KEY_DIR/authorized_keys"
+LOCAL_PUBKEY=$(cat "$PUB_KEY")
 
 echo "USER: $USER"
+echo "PUB KEY: $LOCAL_PUBKEY"
 echo "HOSTS: ${HOSTS[*]}"
 
 # Prüfen, ob User bereits existiert.
@@ -18,32 +20,31 @@ else
         echo "creating $USER on headnode..."
         # Benutzer ohne Passwort anlegen
         adduser --disabled-password --gecos "" "$USER"
-
-        # .ssh-Verzeichnis anlegen
-        mkdir -p "$KEY_DIR"
-        chown -R "$USER:$USER" "/home/$USER"
-        chmod 755 "/home/$USER"
-        chmod 700 "$KEY_DIR"
-
-        # Key wird generiert
-        if [ ! -f "$PRIV_KEY" ]; then
-                sudo -u "$USER" ssh-keygen -t ed25519 -N "" -f "$PRIV_KEY"
-                chmod 600 "$PRIV_KEY"
-                chmod 644 "$PUB_KEY"
-        fi
-
-        PUBKEY_CONTENT=$(cat "$PUB_KEY")
-        echo "$PUBKEY_CONTENT" >> "$AUTHORIZED_KEYS"
-        chown "$USER:$USER" "$AUTHORIZED_KEYS"
-        chmod 600 "$AUTHORIZED_KEYS"
 fi
 
-        # Prüfen, ob Zugriff auf Node möglich ist
+# .ssh-Verzeichnis anlegen
+mkdir -p "$KEY_DIR"
+chown "$USER:$USER" "$KEY_DIR"
+chmod 700 "$KEY_DIR"
 
+# Lokalen Public Key einfügen, um auf den Headnode zu kommen
+echo "$LOCAL_KEY" >> "$KEY_DIR/authorized_keys"
+chown "$USER:$USER" "KEY_DIR/authorized_keys"
+chmod 600 "$KEY_DIR/authorized_keys"
+
+# SSH-KEypaar für neuen Benutzer auf Headnode erzeugen
+if [ ! -f "$KEY_DIR/id_ed25519" ]; then
+        echo "generate SSH_Key für $USER on Headnode"
+        sudo -u "$USER" ssh-keygen -t ed25519 -N "" -f "$KEY_DIR/id_ed25519"
+fi
+
+# Public Key lesen
+PUBKEY_CONTENT=$(cat "$KEY_DIR/id_ed25519.pub")
+
+# Prüfen, ob Zugriff auf Node möglich ist und Key eintragen
 SSH_OPTS="-o BatchMode=yes -o ConnectTimeout=3 -o StrictHostKeyChecking=no"
 
-echo "start checking and key distribution"
-echo "Pubkey_content: $PUBKEY_CONTENT"
+echo "start key distribution"
 
 for HOST in "${HOSTS[@]}"; do
         echo  "Check access to $HOST..."
@@ -55,6 +56,7 @@ for HOST in "${HOSTS[@]}"; do
 USER="$USER"
 PUBKEY='$PUBKEY_CONTENT'
 
+#Benutzer anglegen, falls nicht vorhanden
 if id "\$USER" &>/dev/null; then
         echo "User '\$USER' bereits vorhanden auf \$HOST"
 else
