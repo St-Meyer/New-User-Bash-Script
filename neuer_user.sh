@@ -16,9 +16,9 @@ echo "HOSTS: ${HOSTS[*]}"
 # Prüfen, ob User bereits existiert.
 if id "$USER" >/dev/null 2>&1; then
         echo "user already exists"
-else
-        echo "creating $USER on headnode..."
+else        
         # Benutzer ohne Passwort anlegen
+        echo "creating $USER on headnode..."
         adduser --disabled-password --gecos "" "$USER"
 fi
 
@@ -35,11 +35,11 @@ chmod 600 "$KEY_DIR/authorized_keys"
 # SSH-KEypaar für neuen Benutzer auf Headnode erzeugen
 if [ ! -f "$KEY_DIR/id_ed25519" ]; then
         echo "generate SSH_Key für $USER on Headnode"
-        sudo -u "$USER" ssh-keygen -t ed25519 -N "" -f "$KEY_DIR/id_ed25519"
+        sudo -u "$USER" ssh-keygen -t ed25519 -N "" -f "${KEY_DIR}/${USER}_ed25519"
 fi
 
 # Public Key lesen
-PUBKEY_CONTENT=$(cat "$KEY_DIR/id_ed25519.pub")
+PUBKEY_CONTENT=$(cat "${KEY_DIR}/${USER}_ed25519.pub")
 
 # Prüfen, ob Zugriff auf Node möglich ist und Key eintragen
 SSH_OPTS="-o BatchMode=yes -o ConnectTimeout=3 -o StrictHostKeyChecking=no"
