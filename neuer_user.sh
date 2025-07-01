@@ -2,7 +2,8 @@
 while getopts "h:v" option; do
         case $option in
                 h)
-                        echo "Hilfe: bash neuer_user.sh USER PUBKEY HOSTS"
+                        echo "Bash Script zum Erstellen eines Users auf dem Headnode mit verteilung des Users auf inner Nodes und Keygeneration."
+                        echo "Verwendung: bash neuer_user.sh -v USER PUBKEY HOST1 [HOST2 ...]"
                         exit 0;;
                 v)                        
                         USER=$1
